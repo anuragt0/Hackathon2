@@ -6,7 +6,7 @@ const router = express.Router();
 const { body, validationResult } = require("express-validator");
 // const bcrypt = require("bcryptjs");
 // var jwt = require("jsonwebtoken");
-// var fetchuser = require("../middleware/fetchuser");
+// var fetchuser = require("../middleware/fetchuser")
 
 router.get("/getareas", async (req, res)=>{
     const allAreas = await Area.find();
