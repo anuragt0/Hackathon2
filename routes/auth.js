@@ -16,7 +16,7 @@ router.post(
     body("email", "Enter a valid email").isEmail(),
     body("password", "Password must be atleast 5 characters").isLength({
       min: 5,
-    }),
+    })
   ],
   async (req, res) => {
     // If there are errors, return Bad request and the errors
@@ -40,6 +40,7 @@ router.post(
         name: req.body.name,
         password: secPass,
         email: req.body.email,
+        role: req.body.role
       });
       const data = {
         user: {
