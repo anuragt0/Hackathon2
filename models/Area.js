@@ -15,6 +15,10 @@ const AreaSchema = mongoose.Schema({
         type: Number,
         required: true
     },
+    avgrating: {
+        type: Number,
+        default: null
+    }
     
 })
 const Area = mongoose.model("area", AreaSchema);

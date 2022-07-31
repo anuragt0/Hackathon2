@@ -2,6 +2,7 @@ const express = require("express");
 const User = require("../models/User");
 const Area = require("../models/Area");
 const Slot = require("../models/Slot");
+const Review = require("../models/Review");
 const fetchuser = require('../middleware/fetchuser');
 const router = express.Router();
 const { body, validationResult } = require("express-validator");
@@ -15,7 +16,7 @@ router.get("/getareas", async (req, res)=>{
     res.json(allAreas);
 })
 
-router.post("/getslots", async(req, res)=>{
+router.get("/getslots", async(req, res)=>{
     // No login is required
     // only id of area will be given
     
@@ -97,13 +98,70 @@ router.post("/auth/addarea",fetchuser, [
 
 })
 
+
+//  IMPLEMENT HOW MUCH IS THE AVERAGE RATING OF A PARTICULAR AREA 
+
+
+// Login is required
+router.post("/auth/review", fetchuser,[
+    body("rating", "Rating should be in range of 1 to 5").isNumeric({min: 1, max: 5}),
+    body("review", "Review of the area should be atleast 4 characters long").isLength({min: 4})
+], async (req, res)=>{
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    try {
+        const areaID = req.body.areaid;
+        const userID = req.user.id;
+        const slotNumber = req.body.slotnumber;
+        const foundArea = await Area.find({_id: areaID});
+        
+        console.log(foundArea);
+        if(slotNumber>foundArea.totalSlots || slotNumber<=0){
+            res.status(404).json({message: "Slot does not exist"});
+        }
+        else{
+            const newReview = await Review.create({
+                rating: req.body.rating,
+                review: req.body.review,
+                user: userID,
+                whicharea: areaID,
+                whichSlot: slotNumber
+            })
+            res.json(newReview);
+        }
+    } catch (error) {
+        console.error("error name: ", error.message);
+        res.status(500).send("Internal Server Error");
+    }
+})
+
+router.get("/auth/getreviews", async(req, res)=>{
+    // Login is required
+    const areaID = req.body.areaid;
+    // const userID = req.user.id;
+
+    const allReviews = await Review.find({whicharea: areaID});
+    res.json({allReviews});
+})
+
 //------------------------------- FOR ADMIN ---------------------------
 router.get("/auth/admin", fetchuser, async (req, res)=>{
     // Only admin can access this route
-    const allUsers = await User.find();
-    const allAreas = await Area.find();
-    const allSlots = await Slot.find();
-    res.json({allUsers, allAreas, allSlots});
+    const userID = req.user.id;
+    const loggedInUser = await User.findOne({_id: userID});
+    console.log("here1", loggedInUser);
+    if(loggedInUser.role==="user"){
+        res.status(401).send({ error: "Access denied, please login with correct credentials" })
+    }
+    else{
+        const allUsers = await User.find();
+        const allAreas = await Area.find();
+        const allSlots = await Slot.find();
+        res.json({allUsers, allAreas, allSlots});
+    }
+
 })
 
 module.exports = router;
