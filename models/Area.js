@@ -15,7 +15,11 @@ const AreaSchema = mongoose.Schema({
         type: Number,
         required: true
     },
-    avgrating: {
+    avgRating: {
+        type: Number,
+        default: null,
+    },
+    totalReviews: {
         type: Number,
         default: null
     }

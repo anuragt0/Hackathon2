@@ -104,7 +104,7 @@ router.post("/auth/addarea",fetchuser, [
 
 // Login is required
 router.post("/auth/review", fetchuser,[
-    body("rating", "Rating should be in range of 1 to 5").isNumeric({min: 1, max: 5}),
+    body("rating", "Rating should be in range of 1 to 5").isNumeric({max: 5}),
     body("review", "Review of the area should be atleast 4 characters long").isLength({min: 4})
 ], async (req, res)=>{
     const errors = validationResult(req);
@@ -115,23 +115,53 @@ router.post("/auth/review", fetchuser,[
         const areaID = req.body.areaid;
         const userID = req.user.id;
         const slotNumber = req.body.slotnumber;
-        const foundArea = await Area.find({_id: areaID});
+        const foundArea = await Area.findOne({_id: areaID});
+
+        console.log("Old area: ", foundArea);
         
-        console.log(foundArea);
+
         if(slotNumber>foundArea.totalSlots || slotNumber<=0){
             res.status(404).json({message: "Slot does not exist"});
         }
         else{
-            const newReview = await Review.create({
-                rating: req.body.rating,
-                review: req.body.review,
-                user: userID,
-                whicharea: areaID,
-                whichSlot: slotNumber
-            })
-            res.json(newReview);
+            if(req.body.rating<1 || req.body.rating>5){
+                res.status(400).json({message: "Rating should be between 1 and 5"})
+            }
+            else{
+
+                // change the average rating of this found area
+                let totalratings = foundArea.totalReviews;
+                if(totalratings==null){
+                    totalratings = 0;
+                }
+                let currAvgRating = foundArea.avgRating;
+                if(currAvgRating==null){
+                    currAvgRating = 0;
+                }
+                
+                // have to increase this value by one
+                console.log("here: ", currAvgRating);
+                let newAvgRating = (currAvgRating*totalratings + req.body.rating)/(totalratings+1);
+                console.log("her2: ", newAvgRating);
+                newAvgRating = Math.round(newAvgRating * 10) / 10
+                
+                // NewRating = (currAverage*totalratings+rating)(totalratings+1)
+                const foundAreaForUpdate = await Area.findOneAndUpdate({_id: areaID}, {avgRating: newAvgRating, totalReviews: totalratings+1}, {new: true, runValidators: true, setDefaultsOnInsert: true});
+    
+                // IMPLEMENT-- IF SAME USER GIVE RATING TO SAME AREA AND SLOT AS IT HAS GIVEN BEFORE THAN ONLY UPDATE THE REVIEW
+                console.log("Updated Area: ", foundAreaForUpdate);
+                const newReview = await Review.create({
+                    rating: req.body.rating,
+                    review: req.body.review,
+                    user: userID,
+                    whicharea: areaID,
+                    whichSlot: slotNumber
+                })
+                res.json(newReview);
+            }
         }
     } catch (error) {
+        console.log(error);
         console.error("error name: ", error.message);
         res.status(500).send("Internal Server Error");
     }
